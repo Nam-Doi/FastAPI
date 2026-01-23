@@ -1,3 +1,4 @@
+from pickle import STACK_GLOBAL
 from fastapi import Body, FastAPI, Response,status, HTTPException,Depends,APIRouter
 from .. import models, schemas, utils,oauth2
 from sqlalchemy.orm import Session
@@ -13,7 +14,6 @@ router = APIRouter(
 @router.get("/", response_model=List[schemas.Post])
 async def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user)):
     posts = db.query(models.Post).all()
-    print(current_user.email)
     # cursor.execute(""" SELECT * FROM posts
     # """)
     # posts = cursor.fetchall()
@@ -26,8 +26,7 @@ async def post_create(post : schemas.PostCreate, db: Session = Depends(get_db), 
     # new_post = cursor.fetchone()
     # conn.commit()
     # new_post = models.Post(title = post.title, content = post.content, published = post.published) cach 1
-    print(current_user.id + 10)
-    new_post = models.Post(**post.model_dump())
+    new_post = models.Post(**post.model_dump(),owner_id=current_user.id)
     db.add(new_post)
     db.commit()
     db.refresh(new_post) # lay lai thong tin vua them vi du id.. vi ta khong the dung returning
@@ -40,6 +39,9 @@ async def getby_id(id: int, db: Session = Depends(get_db), current_user: schemas
     # post = cursor.fetchone()
     if not post:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id: {id} was not found")
+    if post.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Not authorized to perform requested action")
     return post
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -47,8 +49,12 @@ async def delete_by_id(id: int, db: Session = Depends(get_db),  current_user: sc
     # cursor.execute(""" DELETE FROM posts WHERE id = %s RETURNING *""",(id,))
     # deleted_post = cursor.fetchone()
     deleted_post = db.query(models.Post).filter(models.Post.id == id)
-    if deleted_post.first() == None:
+    post = deleted_post.first()
+    if post == None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"User with id {id} was not found")
+    if post.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Not authorized to perform requested action")
     deleted_post.delete(synchronize_session=False)
     db.commit()
     return
@@ -59,8 +65,13 @@ def update_by_id(id: int, post:schemas.PostCreate, db: Session = Depends(get_db)
     # update = cursor.fetchone()
     # conn.commit()
     update_post = db.query(models.Post).filter(models.Post.id == id)
-    if update_post.first() == None:
+
+    post = update_post.first()
+    if post == None:
          raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"User with id {id} was not found")
+    if post.owner_id != current_user.id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
+                            detail="Not authorized to perform requested action")
     update_post.update(post.model_dump(), synchronize_session=False)
     db.commit()
     return update_post.first()

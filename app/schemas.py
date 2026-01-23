@@ -6,6 +6,7 @@ class PostBase(BaseModel):
     title: str
     content: str
     published: bool = True
+    
 
 class PostCreate(PostBase):
     pass
@@ -13,6 +14,7 @@ class PostCreate(PostBase):
 class Post(PostBase):
     id: int
     created_at: datetime
+    owner_id: int
     model_config = ConfigDict(from_attributes=True) # cho phép Pydantic đọc dữ liệu từ các đối tượng không phải là dictionary vi du doi tuong sqlAlchemy
 
 #users
