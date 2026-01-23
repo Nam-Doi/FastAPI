@@ -1,5 +1,5 @@
 from fastapi import Body, FastAPI, Response,status, HTTPException,Depends,APIRouter
-from .. import models, schemas, utils
+from .. import models, schemas, utils,oauth2
 from sqlalchemy.orm import Session
 from typing import Optional,List
 from ..database import get_db
@@ -20,7 +20,7 @@ async def get_users(db: Session = Depends(get_db)):
     return users
 
 @router.post("/",status_code=status.HTTP_201_CREATED, response_model=schemas.User)
-def create_user(users: schemas.UserBase,db: Session =Depends(get_db)):
+def create_user(users: schemas.UserBase,db: Session =Depends(get_db), current_user: schemas.TokenData = Depends(oauth2.create_access_token)):
 
     user = db.query(models.User).filter(models.User.email == users.email).first()
     if user:
@@ -35,14 +35,14 @@ def create_user(users: schemas.UserBase,db: Session =Depends(get_db)):
 
 
 @router.get("/{id}", response_model=schemas.User)
-def get_user(id: int, db:Session = Depends(get_db)):
+def get_user(id: int, db:Session = Depends(get_db),  current_user: schemas.TokenData = Depends(oauth2.get_current_user)):
     user = db.query(models.User).filter(models.User.id == id).first()
     if not user:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with id: {id} does not exists!")
     return user
 
 @router.put('/',response_model=schemas.User)
-def update_user(id: int, db: Session =Depends(get_db)):
+def update_user(id: int, db: Session =Depends(get_db),  current_user: schemas.TokenData = Depends(oauth2.get_current_user)):
     user = db.query(models.User).filter(models.User.id == id)
     if not user.first():
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"user with id: {id} does not exits!")
