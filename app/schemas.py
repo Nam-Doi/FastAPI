@@ -11,10 +11,17 @@ class PostBase(BaseModel):
 class PostCreate(PostBase):
     pass
 
+class User(BaseModel):
+    id:int
+    email: EmailStr
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+
 class Post(PostBase):
     id: int
     created_at: datetime
     owner_id: int
+    owner : User
     model_config = ConfigDict(from_attributes=True) # cho phép Pydantic đọc dữ liệu từ các đối tượng không phải là dictionary vi du doi tuong sqlAlchemy
 
 #users
@@ -23,11 +30,6 @@ class UserBase(BaseModel):
     password: str
 class UserCreate(UserBase):
     pass
-class User(BaseModel):
-    id:int
-    email: EmailStr
-    created_at: datetime
-    model_config = ConfigDict(from_attributes=True)
 
 class UserLogin(BaseModel):
     email: EmailStr
