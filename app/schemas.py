@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, validator
+from pydantic import BaseModel, ConfigDict, EmailStr, conint
 from datetime import datetime
 
 
@@ -24,6 +24,10 @@ class Post(PostBase):
     owner : User
     model_config = ConfigDict(from_attributes=True) # cho phép Pydantic đọc dữ liệu từ các đối tượng không phải là dictionary vi du doi tuong sqlAlchemy
 
+class PostOut(BaseModel):
+    Post: Post
+    votes: int
+    model_config = ConfigDict(from_attributes=True)
 #users
 class UserBase(BaseModel):
     email:EmailStr
@@ -42,3 +46,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     id: int | None = None
+
+class Vote(BaseModel):
+    post_id: int
+    dir: conint(le=1)

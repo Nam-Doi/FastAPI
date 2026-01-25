@@ -1,5 +1,5 @@
-from pickle import STACK_GLOBAL
 from fastapi import Body, FastAPI, Response,status, HTTPException,Depends,APIRouter
+from sqlalchemy import func
 from .. import models, schemas, utils,oauth2
 from sqlalchemy.orm import Session
 from typing import Optional,List
@@ -11,14 +11,17 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=List[schemas.Post])
+@router.get("/", response_model=List[schemas.PostOut])
 async def get_posts(db: Session = Depends(get_db), current_user: int = Depends(oauth2.get_current_user),
                     limit: int = 10, skip: int = 0, search: str | None = ""):
-    posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
-    print(limit)
+    # posts = db.query(models.Post).filter(models.Post.title.contains(search)).limit(limit).offset(skip).all()
+    # print(limit)
     # cursor.execute(""" SELECT * FROM posts
     # """)
     # posts = cursor.fetchall()
+    posts = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(
+        models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).filter(
+        models.Post.title.contains(search)).limit(limit).offset(skip).all()
     return posts
 
 
@@ -34,17 +37,21 @@ async def post_create(post : schemas.PostCreate, db: Session = Depends(get_db), 
     db.refresh(new_post) # lay lai thong tin vua them vi du id.. vi ta khong the dung returning
     return new_post
 
-@router.get("/{id}", response_model=schemas.Post)
+@router.get("/{id}", response_model=schemas.PostOut)
 async def getby_id(id: int, db: Session = Depends(get_db), current_user: schemas.TokenData = Depends(oauth2.get_current_user)):
-    post = db.query(models.Post).filter(models.Post.id == id).first()
+
+    # post = db.query(models.Post).filter(models.Post.id == id).first()
+
+    posts = db.query(models.Post, func.count(models.Vote.post_id).label("votes")).join(
+        models.Vote, models.Vote.post_id == models.Post.id, isouter=True).group_by(models.Post.id).filter(models.Post.id == id).first()
     # cursor.execute("""SELECT * FROM posts WHERE id = %s""", (id,))
     # post = cursor.fetchone()
-    if not post:
+    if not posts:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Post with id: {id} was not found")
-    if post.owner_id != current_user.id:
+    if posts.Post.owner_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Not authorized to perform requested action")
-    return post
+    return posts
 
 @router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_by_id(id: int, db: Session = Depends(get_db),  current_user: schemas.TokenData = Depends(oauth2.get_current_user)):
@@ -68,10 +75,10 @@ def update_by_id(id: int, post:schemas.PostCreate, db: Session = Depends(get_db)
     # conn.commit()
     update_post = db.query(models.Post).filter(models.Post.id == id)
 
-    post = update_post.first()
-    if post == None:
+    post_find = update_post.first()
+    if post_find == None:
          raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail=f"User with id {id} was not found")
-    if post.owner_id != current_user.id:
+    if post_find.owner_id != current_user.id:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,
                             detail="Not authorized to perform requested action")
     update_post.update(post.model_dump(), synchronize_session=False)
