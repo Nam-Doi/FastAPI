@@ -20,7 +20,7 @@ async def get_users(db: Session = Depends(get_db)):
     return users
 
 @router.post("/",status_code=status.HTTP_201_CREATED, response_model=schemas.User)
-def create_user(users: schemas.UserBase,db: Session =Depends(get_db), current_user: schemas.TokenData = Depends(oauth2.get_current_user)):
+def create_user(users: schemas.UserBase,db: Session =Depends(get_db)):
 
     user = db.query(models.User).filter(models.User.email == users.email).first()
     if user:
