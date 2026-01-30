@@ -16,10 +16,13 @@ from app.database import get_db
 from app.database import Base
 from app.oauth2 import create_access_token
 from app import models
+from urllib.parse import quote_plus
 
 
 # SQLALCHEMY_DATABASE_URL = 'postgresql://postgres:password123@localhost:5432/fastapi_test'
-SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.DATABASE_USERNAME}:{settings.DATABASE_PASSWORD}@{settings.DATABASE_HOSTNAME}:{settings.DATABASE_PORT}/{settings.DATABASE_NAME}_test"
+password = quote_plus(settings.DATABASE_PASSWORD)
+
+SQLALCHEMY_DATABASE_URL = f"postgresql://{settings.DATABASE_USERNAME}:{password}@{settings.DATABASE_HOSTNAME}:{settings.DATABASE_PORT}/{settings.DATABASE_NAME}_test"
 
 
 engine = create_engine(SQLALCHEMY_DATABASE_URL)
